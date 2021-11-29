@@ -1,9 +1,0 @@
-{
-    "azureautomation.apiVersion": "2020-08-01",
-    "azureautomation.automationAccount": "UpdateTestAutomation",
-    "azureautomation.clientId": "e226b0b9-eb56-45bf-b71e-6ecc702786eb",
-    "azureautomation.clientSecret": "b7a4eeb2-4425-4cb8-8560-a7fea0fc8516",
-    "azureautomation.resourceGroup": "PBI-WVD",
-    "azureautomation.subscriptionId": "047db6ab-9baa-49fc-b7da-8317dfe5ea36",
-    "azureautomation.tenantId": "f8a59ad5-1078-493d-8d8c-9c8a3b040443"
-}
