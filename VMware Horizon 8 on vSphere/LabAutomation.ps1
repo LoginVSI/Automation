@@ -1,67 +1,57 @@
-﻿$PoolName = "Win11-21H2"
-$MachineName = "Win11-*"
-$Test_Number_Users = 200
-$TestID = "[Your test ID]"
-$Comment = "Automated test"
+﻿Write-Host Login Enterprise - Example Automation
+#Read configuration file
+If ($config -eq $null)
+{
+    $config = Get-Content -Path "$PSScriptRoot\config.json" -Raw | ConvertFrom-Json
+}
+
 $TestDate = $(get-date -f yyyy-MM-dd-HH-mm)
-$Testname = $PoolName+"-"+$TestDate
-$LogFilePathWhenCompleted = "C:\LogFiles"
-$MinNumberOfLaunchers=20
+$Testname = $config.VMwareHorizon_PoolName+"-"+$TestDate
+Write-host Starting test: $Testname
+
 
 #Create a directory to create a local copy of ESXtop logfiles
-New-Item -Path $LogFilePathWhenCompleted -Name "Logfiles" -ItemType "directory" -ErrorAction SilentlyContinue
-Start-Transcript -Path $LogFilePathWhenCompleted"\Logfiles"\$Testname".log"
+
+New-Item -ItemType "directory" -Path $config.Automation_LogFilesPathWhenCompleted -ErrorAction SilentlyContinue
+$TranscriptLocation = $config.Automation_LogFilesPathWhenCompleted+"\"+$Testname+".log"
+write-host Storing local logfiles at: $TranscriptLocation
+Start-Transcript -Path $TranscriptLocation
 
 
 #Ideally all tests start the same amount of time after resettting all virtual machines
-$MaxTestPreparationTime=(get-date).AddMinutes(20)
-
-#ESXi Configuration
-$LogFilePath = "/vmfs/volumes/Logs/"
-$ESXUserName = "root"
-$ESXPassword = "[Password]"
-
-
-#vSphere configuration
-$vSphereServer="[IP]"
-$vSphereUsername="[USERNAME]"
-$vSpherePassword="[PASSWORD]"
-
-#Horizon Connection Server
-$HCServer="[FQDN]"
-$HCUsername="[USERNAME]"
-$HCPassword="[PASSWORD]"
-$HCDomain="[DOMAIN]"
+$MaxTestPreparationTime=(get-date).AddMinutes($config.LoginEnterprise_MaxTestPreparationTime)
 
 #Load Login enterprise stuff
- . LoginEnterpriseFunctions.ps1 
- . ESXiAutomation.ps1
+ . $PSScriptRoot\LoginEnterpriseFunctions.ps1
+ . $PSScriptRoot\ESXiAutomation.ps1
  
 # Loading powercli modules
 Import-Module VMware.VimAutomation.HorizonView
 Import-Module VMware.VimAutomation.Core
 
-write-host connecting to Horizon Connection Server: $HCServer
-$HVServer1 = Connect-HVServer -Server $HCServer -User $HCUsername -Password $HCPassword -Domain $HCDomain
-write-host connecting to VMware vSphere: $vSphereServer
-$VIServer1 = Connect-VIServer -Server $vSphereServer -User $vSphereUsername -Password $vSpherePassword -Force
+write-host connecting to Horizon Connection Server: $config.VMwareHorizon_ConnectionServer
 
+$HVServer1 = Connect-HVServer -Server $config.VMwareHorizon_ConnectionServer -User $config.VMwareHorizon_Username -Password $config.VMwareHorizon_Password -Domain $config.VMwareHorizon_Domain
+write-host connecting to VMware vSphere: $config.VMwarevSphere_Server
+$VIServer1 = Connect-VIServer -Server $config.VMwarevSphere_Server -User $config.VMwarevSphere_Username -Password $config.VMwarevSphere_Password -Force
 
 
 #Reboot all launchers
-write-host $(Get-Date) "Reboot all launchers"
-get-vm -name t1-ls* | restart-VM -Confirm:$False
-write-host $(Get-Date) "Waiting for launchers to report ready (Configured: $MinNumberOfLaunchers) "
+write-host $(Get-Date) "Reboot all launchers" $config.LoginEnterprise_Launcher_Names
+get-vm -name $config.LoginEnterprise_Launcher_Names | restart-VM -Confirm:$False
+write-host $(Get-Date) "Waiting for launchers to reboot (Configured minimum: "$config.LoginEnterprise_MinNumberOfLaunchers ")"
 sleep 30
 
-while ((Get-LeLaunchers).count -ne $MinNumberOfLaunchers) {
-         write-host $(Get-Date) "Waiting for launchers to restart(" (Get-LeLaunchers).count ")"
+#wait till number of launchers is greater than or equal to minimum
+while ($true) {
+         write-host $(Get-Date) "Waiting for launchers to complete reboot and report ready (" (Get-LeLaunchers).count")"
          Start-Sleep -Seconds 10
+         if ((Get-LeLaunchers).count -ge $config.LoginEnterprise_MinNumberOfLaunchers) {break}
     }
 write-host $(Get-Date) (Get-LeLaunchers).count "Launchers reported ready and online"
 
 #Reboot all VMs in desktop pool
-$VMS = get-vm $MachineName
+$VMS = get-vm $config.VMwareHorizon_PoolVMNamingPattern
     write-host $(Get-Date) "Reboot all machines in desktop-pool:" $VMS.Count
     foreach ($vm in $VMS){
         try {
@@ -71,20 +61,20 @@ $VMS = get-vm $MachineName
         write-host $(Get-Date) $vm.Name -ForegroundColor red
         }
     }DO{
-        $PoolAvailable = (get-hvmachinesummary -PoolName $PoolName | where {$_.base.basicstate -eq "AVAILABLE"}).count
+        $PoolAvailable = (get-hvmachinesummary -PoolName $config.VMwareHorizon_PoolName | where {$_.base.basicstate -eq "AVAILABLE"}).count
         write-host $(Get-Date) "Waiting for pool to restart(" $PoolAvailable ")"
         sleep 30
     }
-    Until ( $PoolAvailable -ge $Test_Number_Users)
+    Until ( $PoolAvailable -ge $config.LoginEnterprise_TestNumberOfUsers)
 
-write-host $(Get-Date) "All machines available, moving on. Test users:  " $Test_Number_Users " Pool size: " $PoolAvailable
+write-host $(Get-Date) "All machines available, moving on. Test users:  " $config.LoginEnterprise_TestNumberOfUsers " Pool size: " $PoolAvailable
 
 #ideally all tests start the same amount of time after resetting all vms in the desktop pool (max 20 minutes)
-$MaxTestPreparationTimeLeft=NEW-TIMESPAN –Start (GET-DATE) –End $MaxTestPreparationTime
+$MaxTestPreparationTimeLeft=NEW-TIMESPAN –Start (GET-DATE) –End $config.LoginEnterprise_MaxTestPreparationTime
 
 If ($MaxTestPreparationTimeLeft.Minutes -gt 0)
  { 
-     write-host $(Get-Date) "Sleeping for" $MaxTestPreparationTimeLeft.minutes "Minutes until" $MaxTestPreparationTime
+     write-host $(Get-Date) "Sleeping for" $MaxTestPreparationTimeLeft.minutes "Minutes until" $config.LoginEnterprise_MaxTestPreparationTime
      sleep ($MaxTestPreparationTimeLeft.Minutes * 60)
  }else{
     write-host $(Get-Date) "Exeeded maximum test preparation time by " $MaxTestPreparationTimeLeft.Minutes "minutes" -ForegroundColor Red
@@ -92,12 +82,13 @@ If ($MaxTestPreparationTimeLeft.Minutes -gt 0)
 
 
 #Start capturing performance data (ESXtop) 
-Capture-HostData1 -HostName "[HOSTNAME]" -TestName $Testname
-#Repeat when using multiple hosts
+Capture-HostData1 -HostName $config.VMwareESXi_Hosts -TestName $Testname
+
 
 #Connect to Login Enterprise, start test and wait for completion
-Start-Test($TestID)
-Wait-Test($TestID)
+Start-Test($config.LoginEnterprise_TestID)
+Wait-Test($config.LoginEnterprise_TestID)
 
-Collect-HostData -Hostname "[HOSTNAME]" -Testname $Testname -LogFilePathWhenCompleted $LogFilePathWhenCompleted"\Logfiles"
-#Repeat when using multiple hosts
+Collect-HostData -Hostname $config.VMwareESXi_Hosts -Testname $Testname -LogFilePathWhenCompleted $config.Automation_LogFilesPathWhenCompleted"\"
+
+

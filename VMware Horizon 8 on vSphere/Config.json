@@ -1,0 +1,29 @@
+{
+    	"LoginEnterprise_FQDN": "le-lab.lab.loginvsi.com",	
+    	"LoginEnterprise_APIAccessToken": "",
+    	"LoginEnterprise_TestNumberOfUsers": "5",
+	"LoginEnterprise_TestID": "f378dbd0-8def-42f6-8f9e-1e97a3cc329c",
+	"LoginEnterprise_TestComment": "",
+	"LoginEnterprise_MinNumberOfLaunchers": 20,
+	"LoginEnterprise_MaxTestPreparationTime": "20",
+	"LoginEnterprise_Launcher_Names": "T1-LS*",
+
+	"VMwareHorizon_PoolName": "Win11-21H2",
+    	"VMwareHorizon_PoolVMNamingPattern": "W11-*",
+	"VMwareHorizon_ConnectionServer": "",
+	"VMwareHorizon_Username": "",
+	"VMwareHorizon_Password": "",
+	"VMwareHorizon_Domain": "LAB",
+
+	"VMwareESXi_Hosts": "",
+	"VMwareESXi_LogFilePath": "/vmfs/volumes/Logs/",
+	"VMwareESXi_UserName": "root",
+	"VMwareESXi_Password": "",
+
+	"VMwarevSphere_Server": "",
+	"VMwarevSphere_Username": "",
+	"VMwarevSphere_Password": "",
+
+	"Automation_LogFilesPathWhenCompleted": "C:\\Logfiles"
+
+}
