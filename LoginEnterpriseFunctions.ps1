@@ -515,6 +515,36 @@ function Remove-LeLauncherGroups {
     $Response.id
 }
 
+function Get-LeLaunchers {
+    # this is only required for older version of PowerShell/.NET
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11
+ 
+    # WARNING: ignoring SSL/TLS certificate errors is a security risk
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+ 
+    $Header = @{
+        "Accept"        = "application/json"
+        "Authorization" = "Bearer $global:token"
+    }
+ 
+    $Body = @{
+        orderBy   = "Name"
+        direction = "Ascending"
+        count     = "5000"
+    } 
+ 
+    $Parameters = @{
+        Uri         = 'https://' + $global:fqdn + '/publicApi/v4/launchers'
+        Headers     = $Header
+        Method      = 'GET'
+        body        = $Body
+        ContentType = 'application/json'
+    }
+ 
+    $Response = Invoke-RestMethod @Parameters
+    $Response.items 
+}
+
 #Applications-----------------------------
 function Get-LeApplications {
     # this is only required for older version of PowerShell/.NET
