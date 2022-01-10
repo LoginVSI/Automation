@@ -1,23 +1,24 @@
 $password = Read-Host -AsSecureString "Enter password"
 
-$global:nrOfUsers = "262" 
-$global:fqdn = "your_fqdn"
-$global:token = 'your_configuration_token' 
-$global:naming = "TestUser"
-$global:domainID = "lgnv"
-$global:UPN = "@your.domain"
-$global:adPath = "OU=TestUsers,DC=your,DC=domain"
- 
+
+$nrOfUsers = "500"
+$fqdn = "LoginEnterprise.yourorganization.com"
+$token = 'your_configuration_token' 
+$naming = "LE-TestUser-"
+$domainID = "yourorganization.com"
+$UPN = "@yourorganization.com"
+$adPath = "OU=TestUsers,DC=your,DC=domain"
+
 function New-LeUser {
     Param (
         [string]$username,
         [string]$domainID,
         [string]$password
     )
- 
+
     # this is only required for older version of PowerShell/.NET
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11
- 
+
     # WARNING: ignoring SSL/TLS certificate errors is a security risk
     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { return $true; }
     
@@ -26,44 +27,43 @@ function New-LeUser {
         domainID = $domainID
         password = $password
     } | ConvertTo-Json
- 
+
     $header = @{
         "Accept"        = "application/json"
-        "Authorization" = "Bearer $global:token"
+        "Authorization" = "Bearer $token"
     }
- 
+
     $params = @{
-        Uri         = 'https://' + $global:fqdn + '/publicApi/v4/accounts'
+        Uri         = 'https://' + $fqdn + '/publicApi/v4/accounts'
         Headers     = $header
         Method      = 'POST'
         Body        = $user
         ContentType = 'application/json'
     }
- 
+
     $Response = Invoke-RestMethod @params
     $Response.id
 }
- 
+
 function Get-Usernames {
     Param (
         [Parameter(Mandatory = $true)]
         [int]$Start,
         [Parameter(Mandatory = $true)]
-        [int]$End
+        [string]$End
     )
-  
+ 
     $Start..$End | % {
-        $Number = ($Start++).ToString('00')
-        $Name = $global:naming + $Number
+        $Number = ($Start++).ToString(("0").PadLeft($End.Length,'0'))
+        $Name = $naming + $Number
         [array]$Counts += $Name }
     Return $Counts
 }
- 
-foreach ($User in (Get-Usernames 1 $global:nrOfUsers)) {
 
-    $UPN = $User + $global:UPN 
-    New-ADUser -Name "$User" -SamAccountName "$User" -UserPrincipalName "$UPN" -Path $global:adPath -ScriptPath "LoginPI.Logon.exe https://$global:fqdn" -AccountPassword $password -Enabled $true
-    New-LeUser -username $User -domainID $global:domainID -password ($Password | ConvertFrom-SecureString )
- 
+foreach ($User in (Get-Usernames 1 $nrOfUsers)) {
+    $UPN = ""
+    $UPN = $User + $UPN 
+    New-LeUser -username $User -domainID $domainID -password ([Net.NetworkCredential]::new('', $password).Password) 
+    New-ADUser -Name "$User" -SamAccountName "$User" -UserPrincipalName "$UPN" -Path $global:adPath -AccountPassword $Password -Enabled $true -PasswordNeverExpires $true																									
 } 
-
+  
